@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AI Infra Blog - 记录 AI 基础设施、工程实践与学习笔记" />
+    <title>AI Infra Notes</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top">AI Infra Notes</a>
+      <nav aria-label="主导航">
+        <a href="#articles">文章</a><a href="#topics">专题</a><a href="#about">关于</a><a href="/editor.html">编辑</a>
+      </nav>
+      <button class="theme-button" id="themeToggle" aria-label="切换深色模式">◐</button>
+    </header>
+    <main id="top" class="layout">
+      <aside class="profile" id="about">
+        <div class="avatar">AI</div>
+        <p class="eyebrow">个人技术笔记</p>
+        <h1>AI Infra Notes</h1>
+        <p class="intro">记录 AI 基础设施、云原生、模型部署与工程化实践。</p>
+        <div class="stats"><span><strong>3</strong> 篇文章</span><span><strong>4</strong> 个主题</span></div>
+        <div class="links"><a href="https://github.com/" target="_blank" rel="noreferrer">GitHub ↗</a><a href="mailto:hello@example.com">Email ↗</a></div>
+        <p class="hint">把这里的名称、简介和链接替换成你的资料即可。</p>
+      </aside>
+      <section class="content">
+        <div class="hero"><p class="eyebrow">BUILD · LEARN · SHARE</p><h2>把技术实践写成长期积累</h2><p>一处安静的空间，用来沉淀解决过的问题和学到的新东西。</p></div>
+        <div class="section-head"><h2 id="articles">最新文章</h2><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="搜索文章" /></label></div>
+        <div id="postList" class="posts"></div>
+        <section id="topics" class="topics"><h2>专题标签</h2><div id="tagList"></div></section>
+      </section>
+    </main>
+    <footer>© 2026 AI Infra Notes · Built for Cloudflare Pages</footer>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

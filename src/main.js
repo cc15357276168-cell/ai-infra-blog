@@ -22,7 +22,7 @@ function parse(text) {
   return { ...meta, tags: (meta.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean), body: match?.[2] || text };
 }
 function render(items) {
-  list.innerHTML = items.length ? items.map((post) => `<article class="post"><div class="post-meta"><span>${post.category || 'Notes'}</span><time>${post.date || ''}</time><span>${post.minutes || ''}</span></div><h3>${post.title || 'Untitled'}</h3><p>${post.excerpt || ''}</p><div class="markdown">${markdown(post.body)}</div><div class="post-tags">${post.tags.map((tag) => `<button data-tag="${tag}"># ${tag}</button>`).join('')}</div></article>`).join('') : '<p class="empty">No articles yet. Add a Markdown file to <code>src/content/posts/</code>.</p>';
+  list.innerHTML = items.length ? items.map((post) => `<article class="post"><div class="post-meta"><span>${post.category || 'Notes'}</span><time>${post.date || ''}</time><span>${post.minutes || ''}</span></div><h3>${post.title || 'Untitled'}</h3><p>${post.excerpt || ''}</p><div class="post-tags">${post.tags.map((tag) => `<button data-tag="${tag}"># ${tag}</button>`).join('')}</div></article>`).join('') : '<p class="empty">No articles yet. Add a Markdown file to <code>src/content/posts/</code>.</p>';
   document.querySelectorAll('[data-tag]').forEach((button) => button.addEventListener('click', () => { input.value = button.dataset.tag; filter(); }));
 }
 function filter() { const keyword = input.value.toLowerCase().trim(); render(posts.filter((post) => `${post.title} ${post.category} ${post.tags.join(' ')} ${post.excerpt}`.toLowerCase().includes(keyword))); }

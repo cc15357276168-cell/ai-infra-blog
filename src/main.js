@@ -5,9 +5,18 @@ const list = document.querySelector('#postList');
 const tagList = document.querySelector('#tagList');
 const input = document.querySelector('#searchInput');
 const toggle = document.querySelector('#themeToggle');
+const sectionHead = document.querySelector('.section-head');
+const topics = document.querySelector('#topics');
 let posts = [];
 
-function escapeHtml(value) { return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+}
+
+function slugify(value) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-').replace(/^-+|-+$/g, '') || 'post';
+}
+
 function markdown(source) {
   let html = escapeHtml(source).replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>').replace(/^## (.+)$/gm, '<h2>$1</h2>').replace(/^# (.+)$/gm, '<h1>$1</h1>');
@@ -16,21 +25,40 @@ function markdown(source) {
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">').replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
   return html.split(/\n\n+/).map((block) => /^<(h[1-3]|pre|ul|blockquote|img)/.test(block.trim()) ? block : `<p>${block.replace(/\n/g, '<br>')}</p>`).join('');
 }
-function parse(text) {
+
+function parse(text, sourcePath) {
   const match = text.match(/^---\s*([\s\S]*?)\s*---\s*([\s\S]*)$/); const meta = {};
   (match?.[1] || '').split('\n').forEach((line) => { const [key, ...value] = line.split(':'); if (key) meta[key.trim()] = value.join(':').trim(); });
-  return { ...meta, tags: (meta.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean), body: match?.[2] || text };
+  const title = meta.title || sourcePath.split('/').pop().replace(/\.md$/, '');
+  return { ...meta, title, slug: slugify(title), sourcePath, tags: (meta.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean), body: match?.[2] || text };
 }
-function render(items) {
-  list.innerHTML = items.length ? items.map((post) => `<article class="post"><div class="post-meta"><span>${post.category || 'Notes'}</span><time>${post.date || ''}</time><span>${post.minutes || ''}</span></div><h3>${post.title || 'Untitled'}</h3><p>${post.excerpt || ''}</p><div class="post-tags">${post.tags.map((tag) => `<button data-tag="${tag}"># ${tag}</button>`).join('')}</div></article>`).join('') : '<p class="empty">No articles yet. Add a Markdown file to <code>src/content/posts/</code>.</p>';
-  document.querySelectorAll('[data-tag]').forEach((button) => button.addEventListener('click', () => { input.value = button.dataset.tag; filter(); }));
+
+function renderHome(items) {
+  sectionHead.hidden = false;
+  topics.hidden = false;
+  list.innerHTML = items.length ? items.map((post) => `<a class="post post-link" href="?post=${encodeURIComponent(post.slug)}"><div class="post-meta"><span>${escapeHtml(post.category || 'Notes')}</span><time>${escapeHtml(post.date || '')}</time><span>${escapeHtml(post.minutes || '')}</span></div><h3>${escapeHtml(post.title || 'Untitled')}</h3><p>${escapeHtml(post.excerpt || '')}</p><div class="post-tags">${post.tags.map((tag) => `<button type="button" data-tag="${escapeHtml(tag)}"># ${escapeHtml(tag)}</button>`).join('')}</div><span class="read-more">Read article →</span></a>`).join('') : '<p class="empty">No articles yet. Add a Markdown file to <code>src/content/posts/</code>.</p>';
+  document.querySelectorAll('[data-tag]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); input.value = button.dataset.tag; filter(); }));
 }
-function filter() { const keyword = input.value.toLowerCase().trim(); render(posts.filter((post) => `${post.title} ${post.category} ${post.tags.join(' ')} ${post.excerpt}`.toLowerCase().includes(keyword))); }
-posts = Object.values(postModules).map(parse).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+function renderDetail(post) {
+  sectionHead.hidden = true;
+  topics.hidden = true;
+  list.innerHTML = `<article class="article-detail"><a class="back-link" href="./">← Back to articles</a><div class="post-meta"><span>${escapeHtml(post.category || 'Notes')}</span><time>${escapeHtml(post.date || '')}</time><span>${escapeHtml(post.minutes || '')}</span></div><h1>${escapeHtml(post.title || 'Untitled')}</h1><p class="article-excerpt">${escapeHtml(post.excerpt || '')}</p><div class="markdown">${markdown(post.body)}</div><div class="post-tags">${post.tags.map((tag) => `<span># ${escapeHtml(tag)}</span>`).join('')}</div></article>`;
+}
+
+function filter() {
+  const keyword = input.value.toLowerCase().trim();
+  renderHome(posts.filter((post) => `${post.title} ${post.category} ${post.tags.join(' ')} ${post.excerpt}`.toLowerCase().includes(keyword)));
+}
+
+posts = Object.entries(postModules).map(([sourcePath, text]) => parse(text, sourcePath)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
 const tags = [...new Set(posts.flatMap((post) => post.tags))];
-tagList.innerHTML = tags.map((tag) => `<button data-topic="${tag}"># ${tag}</button>`).join('');
+tagList.innerHTML = tags.map((tag) => `<button data-topic="${escapeHtml(tag)}"># ${escapeHtml(tag)}</button>`).join('');
 document.querySelectorAll('[data-topic]').forEach((button) => button.addEventListener('click', () => { input.value = button.dataset.topic; filter(); }));
-render(posts);
 input.addEventListener('input', filter);
 toggle.addEventListener('click', () => { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); });
 if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+
+const requestedSlug = new URLSearchParams(window.location.search).get('post');
+const requestedPost = posts.find((post) => post.slug === requestedSlug);
+if (requestedPost) renderDetail(requestedPost); else renderHome(posts);

@@ -18,6 +18,10 @@ function markdown(source) {
   html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>').replace(/`([^`]+)`/g, '<code>$1</code>');
   html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>').replace(/(?:<li>.*<\/li>\n?)+/g, (items) => `<ul>${items}</ul>`);
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">').replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>');
   html = html.split(/\n\n+/).map((block) => /^(<h[1-3]|<pre|<ul|<blockquote|<img|@@CODE)/.test(block.trim()) ? block : `<p>${block.replace(/\n/g, '<br>')}</p>`).join('');
   return html.replace(/@@CODE(\d+)@@/g, (_, index) => codeBlocks[Number(index)]);
 }
@@ -25,7 +29,10 @@ function parse(text, sourcePath) {
   const match = text.match(/^---\s*([\s\S]*?)\s*---\s*([\s\S]*)$/); const meta = {};
   (match?.[1] || '').split('\n').forEach((line) => { const [key, ...value] = line.split(':'); if (key) meta[key.trim()] = value.join(':').trim(); });
   const title = meta.title || sourcePath.split('/').pop().replace(/\.md$/, '');
-  return { ...meta, title, slug: slugify(title), sourcePath, tags: (meta.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean), body: match?.[2] || text };
+  let body = match?.[2] || text;
+  const firstHeading = body.match(/^\s*#\s+(.+?)\s*(?:\r?\n|$)/);
+  if (firstHeading && firstHeading[1].trim() === title.trim()) body = body.slice(firstHeading[0].length).trim();
+  return { ...meta, title, slug: slugify(title), sourcePath, tags: (meta.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean), body };
 }
 function renderHome(items) {
   sectionHead.hidden = false; topics.hidden = false;
@@ -35,6 +42,19 @@ function renderHome(items) {
 function renderDetail(post) {
   sectionHead.hidden = true; topics.hidden = true;
   list.innerHTML = `<article class="article-detail"><a class="back-link" href="./">← Back to articles</a><div class="post-meta"><span>${escapeHtml(post.category || 'Notes')}</span><time>${escapeHtml(post.date || '')}</time><span>${escapeHtml(post.minutes || '')}</span></div><h1>${escapeHtml(post.title || 'Untitled')}</h1><p class="article-excerpt">${escapeHtml(post.excerpt || '')}</p><div class="markdown">${markdown(post.body)}</div><div class="post-tags">${post.tags.map((tag) => `<span># ${escapeHtml(tag)}</span>`).join('')}</div></article>`;
+  list.querySelectorAll('.article-detail .markdown img').forEach((image) => image.addEventListener('click', () => openLightbox(image)));
+}
+
+function openLightbox(image) {
+  const overlay = document.createElement('div');
+  overlay.className = 'image-lightbox';
+  overlay.innerHTML = `<button type="button" aria-label="Close image">×</button><img src="${image.src}" alt="${escapeHtml(image.alt || '')}">`;
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKeyDown); };
+  const onKeyDown = (event) => { if (event.key === 'Escape') close(); };
+  overlay.addEventListener('click', (event) => { if (event.target === overlay) close(); });
+  overlay.querySelector('button').addEventListener('click', close);
+  document.addEventListener('keydown', onKeyDown);
+  document.body.append(overlay);
 }
 function filter() { const keyword = input.value.toLowerCase().trim(); renderHome(posts.filter((post) => `${post.title} ${post.category} ${post.tags.join(' ')} ${post.excerpt}`.toLowerCase().includes(keyword))); }
 posts = Object.entries(postModules).map(([sourcePath, text]) => parse(text, sourcePath)).sort((a, b) => String(b.date).localeCompare(String(a.date)));

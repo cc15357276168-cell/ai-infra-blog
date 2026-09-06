@@ -10,6 +10,20 @@ a { color:inherit; text-decoration:none; } .topbar { max-width:1500px; margin:au
 .paste-tip{margin:6px 0;color:var(--muted);font-size:12px;font-weight:400}.preview img{display:block;max-width:100%;max-height:360px;margin:10px 0;border-radius:5px}
 .posts{margin-top:24px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.post{padding:22px;border:1px solid var(--line);border-radius:8px;background:var(--card);min-height:180px}.post h3{margin:12px 0 9px;font-size:23px}.post p{color:var(--muted);margin:0 0 18px}.empty{grid-column:1/-1}
 
+/* Centered article reading view and a neutral blue-gray palette. */
+:root{--paper:#fff;--ink:#18212b;--muted:#66717d;--line:#dce3e8;--card:#fff;--accent:#46627a;--soft:#eef3f7}
+:root.dark{--paper:#10151b;--ink:#e7edf2;--muted:#aab6c1;--line:#2c3945;--card:#171e25;--accent:#9ab4c8;--soft:#23313d}
+.detail-page .layout{display:block;max-width:1320px;padding:54px 48px 90px}
+.detail-page .profile{display:none}
+.detail-page .content{width:100%;max-width:1180px;margin:0 auto}
+.detail-page .posts{display:block;width:100%;max-width:none;margin:0}
+.detail-page .article-detail{width:100%;max-width:none;margin:0 auto}
+.detail-page .article-detail h1{font-size:clamp(42px,5vw,60px);letter-spacing:-.02em}
+.detail-page .article-detail .markdown{width:100%;max-width:none;font-size:18px;line-height:1.95}
+.detail-page .markdown pre{background:#fff;color:#263442;border-color:#cbd6df;border-left-color:var(--accent)}
+.detail-page .markdown code{color:#334e68;background:#f1f5f8}
+@media(max-width:760px){.detail-page .layout{padding:34px 20px 60px}.detail-page .article-detail .markdown{font-size:16px}.detail-page .article-detail h1{font-size:35px}}
+
 /* Keep these reading styles last so older editor rules cannot narrow the article. */
 .article-detail{width:100%;max-width:1180px}
 .article-detail .markdown{width:100%;max-width:none;font-size:17px;line-height:1.9}

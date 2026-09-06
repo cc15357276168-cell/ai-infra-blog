@@ -35,11 +35,13 @@ function parse(text, sourcePath) {
   return { ...meta, title, slug: slugify(title), sourcePath, tags: (meta.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean), body };
 }
 function renderHome(items) {
+  document.body.classList.remove('detail-page');
   sectionHead.hidden = false; topics.hidden = false;
   list.innerHTML = items.length ? items.map((post) => `<a class="post post-link" href="?post=${encodeURIComponent(post.slug)}"><div class="post-meta"><span>${escapeHtml(post.category || 'Notes')}</span><time>${escapeHtml(post.date || '')}</time><span>${escapeHtml(post.minutes || '')}</span></div><h3>${escapeHtml(post.title || 'Untitled')}</h3><p>${escapeHtml(post.excerpt || '')}</p><div class="post-tags">${post.tags.map((tag) => `<button type="button" data-tag="${escapeHtml(tag)}"># ${escapeHtml(tag)}</button>`).join('')}</div><span class="read-more">Read article →</span></a>`).join('') : '<p class="empty">No articles yet. Add a Markdown file to <code>src/content/posts/</code>.</p>';
   document.querySelectorAll('[data-tag]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); input.value = button.dataset.tag; filter(); }));
 }
 function renderDetail(post) {
+  document.body.classList.add('detail-page');
   sectionHead.hidden = true; topics.hidden = true;
   list.innerHTML = `<article class="article-detail"><a class="back-link" href="./">← Back to articles</a><div class="post-meta"><span>${escapeHtml(post.category || 'Notes')}</span><time>${escapeHtml(post.date || '')}</time><span>${escapeHtml(post.minutes || '')}</span></div><h1>${escapeHtml(post.title || 'Untitled')}</h1><p class="article-excerpt">${escapeHtml(post.excerpt || '')}</p><div class="markdown">${markdown(post.body)}</div><div class="post-tags">${post.tags.map((tag) => `<span># ${escapeHtml(tag)}</span>`).join('')}</div></article>`;
   list.querySelectorAll('.article-detail .markdown img').forEach((image) => image.addEventListener('click', () => openLightbox(image)));

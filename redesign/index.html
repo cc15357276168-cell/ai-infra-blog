@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ChenChen's notes on AI infrastructure and engineering." />
+    <title>ChenChen · AI infrastructure notes</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="wordmark" href="#top">chenchen<span>/</span>notes</a>
+      <nav class="desktop-nav" aria-label="Primary navigation">
+        <a href="#posts">Writing</a><a href="#topics">Topics</a><a href="#about">About</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-button" id="themeToggle" aria-label="Toggle theme">◐</button>
+        <button class="menu-button" id="menuToggle" aria-label="Toggle menu">Menu</button>
+      </div>
+    </header>
+
+    <main id="top" class="page-shell">
+      <aside class="sidebar" id="about">
+        <div class="avatar">CC</div>
+        <p class="kicker">PERSONAL NOTES</p>
+        <h1>ChenChen</h1>
+        <p class="bio">A field journal for building reliable AI systems, infrastructure, and a better understanding of how things work.</p>
+        <div class="sidebar-links"><a href="#posts">Writing <span>12</span></a><a href="#topics">Topics <span>05</span></a><a href="#about">About <span>↗</span></a></div>
+        <div class="socials"><a href="https://github.com/" target="_blank" rel="noreferrer">GitHub ↗</a><a href="mailto:hello@example.com">Email ↗</a></div>
+        <p class="location">Based in Shenzhen<br />Working across the stack.</p>
+      </aside>
+
+      <section class="content">
+        <div class="hero"><p class="kicker">HELLO, I'M CHENCHEN</p><h2>Notes from the<br /><em>infrastructure layer.</em></h2><p>Practical observations on AI infrastructure, distributed systems, and the small details that make complex software feel simple.</p></div>
+        <section id="posts" class="post-section">
+          <div class="section-bar"><h2>Selected writing</h2><label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Search notes..." /></label></div>
+          <div class="featured" id="featuredPost"></div>
+          <div class="post-list" id="postList"></div>
+        </section>
+        <section id="topics" class="topics"><div class="section-bar"><h2>Explore by topic</h2><span class="section-count">05 TOPICS</span></div><div class="topic-grid" id="topicList"></div></section>
+      </section>
+    </main>
+    <footer><span>© 2026 ChenChen</span><span>Built for curiosity <i>✦</i></span><a href="#top">Back to top ↑</a></footer>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

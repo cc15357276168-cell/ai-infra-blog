@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 import shutil
 import subprocess
 import tempfile
 import threading
+import urllib.request
+import webbrowser
 import zipfile
 from datetime import date
 from pathlib import Path
@@ -104,7 +107,7 @@ def convert_markdown(md_file: Path, extracted_files: list[Path], posts_dir: Path
 class NotionPublisher(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Notion → ChenChen-blog")
+        self.title("Notion → ChenChen-blog 文章管理工具")
         self.geometry("760x560")
         self.minsize(680, 500)
         self.project_dir = Path(__file__).resolve().parent.parent
@@ -113,32 +116,49 @@ class NotionPublisher(tk.Tk):
 
     def _build_ui(self) -> None:
         self.columnconfigure(1, weight=1)
-        self.rowconfigure(5, weight=1)
+        self.rowconfigure(6, weight=1)
         tk.Label(self, text="Notion → ChenChen-blog", font=("Segoe UI", 18, "bold")).grid(row=0, column=0, columnspan=3, padx=24, pady=(22, 4), sticky="w")
-        tk.Label(self, text="Import a Notion ZIP, organize images, and publish with one click.", fg="#5b6570").grid(row=1, column=0, columnspan=3, padx=24, pady=(0, 18), sticky="w")
+        tk.Label(self, text="导入 Notion 文章、管理本地文章、预览并一键发布", fg="#5b6570").grid(row=1, column=0, columnspan=3, padx=24, pady=(0, 18), sticky="w")
 
-        tk.Label(self, text="Blog folder").grid(row=2, column=0, padx=(24, 8), pady=8, sticky="w")
+        tk.Label(self, text="博客文件夹").grid(row=2, column=0, padx=(24, 8), pady=8, sticky="w")
         self.project_var = tk.StringVar(value=str(self.project_dir))
         tk.Entry(self, textvariable=self.project_var).grid(row=2, column=1, padx=8, pady=8, sticky="ew")
-        tk.Button(self, text="Browse…", command=self.choose_project).grid(row=2, column=2, padx=(8, 24), pady=8)
+        tk.Button(self, text="选择文件夹…", command=self.choose_project).grid(row=2, column=2, padx=(8, 24), pady=8)
 
-        tk.Label(self, text="Notion ZIP").grid(row=3, column=0, padx=(24, 8), pady=8, sticky="w")
-        self.zip_var = tk.StringVar(value="No ZIP selected")
+        tk.Label(self, text="Notion 导出 ZIP").grid(row=3, column=0, padx=(24, 8), pady=8, sticky="w")
+        self.zip_var = tk.StringVar(value="尚未选择 ZIP 文件")
         tk.Entry(self, textvariable=self.zip_var, state="readonly").grid(row=3, column=1, padx=8, pady=8, sticky="ew")
-        tk.Button(self, text="Choose ZIP…", command=self.choose_zip).grid(row=3, column=2, padx=(8, 24), pady=8)
+        tk.Button(self, text="选择 ZIP…", command=self.choose_zip).grid(row=3, column=2, padx=(8, 24), pady=8)
 
-        self.commit_var = tk.StringVar(value="Import Notion article")
-        tk.Label(self, text="Commit message").grid(row=4, column=0, padx=(24, 8), pady=8, sticky="w")
-        tk.Entry(self, textvariable=self.commit_var).grid(row=4, column=1, padx=8, pady=8, sticky="ew")
+        tk.Label(self, text="本地文章管理").grid(row=4, column=0, padx=(24, 8), pady=(12, 4), sticky="nw")
+        post_frame = tk.Frame(self)
+        post_frame.grid(row=4, column=1, columnspan=2, padx=(8, 24), pady=(8, 4), sticky="ew")
+        post_frame.columnconfigure(0, weight=1)
+        self.post_list = tk.Listbox(post_frame, height=5, exportselection=False)
+        self.post_list.grid(row=0, column=0, sticky="ew")
+        scrollbar = tk.Scrollbar(post_frame, command=self.post_list.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.post_list.configure(yscrollcommand=scrollbar.set)
+        tk.Button(post_frame, text="刷新列表", command=self.refresh_posts).grid(row=1, column=0, pady=(6, 0), sticky="w")
+        self.delete_button = tk.Button(post_frame, text="删除选中文章", command=self.delete_selected_post)
+        self.delete_button.grid(row=1, column=0, padx=(82, 0), pady=(6, 0), sticky="w")
 
-        self.log = tk.Text(self, height=16, state="disabled", wrap="word", bg="#f6f8fa")
-        self.log.grid(row=5, column=0, columnspan=3, padx=24, pady=(12, 12), sticky="nsew")
+        self.commit_var = tk.StringVar(value="导入 Notion 文章")
+        tk.Label(self, text="提交说明").grid(row=5, column=0, padx=(24, 8), pady=8, sticky="w")
+        tk.Entry(self, textvariable=self.commit_var).grid(row=5, column=1, padx=8, pady=8, sticky="ew")
+
+        self.log = tk.Text(self, height=10, state="disabled", wrap="word", bg="#f6f8fa")
+        self.log.grid(row=6, column=0, columnspan=3, padx=24, pady=(12, 12), sticky="nsew")
         actions = tk.Frame(self)
-        actions.grid(row=6, column=0, columnspan=3, padx=24, pady=(0, 22), sticky="e")
-        self.import_button = tk.Button(actions, text="1. Import ZIP", width=16, command=self.import_zip)
+        actions.grid(row=7, column=0, columnspan=3, padx=24, pady=(0, 22), sticky="e")
+        self.import_button = tk.Button(actions, text="1. 导入 ZIP", width=16, command=self.import_zip)
         self.import_button.pack(side="left", padx=5)
-        self.publish_button = tk.Button(actions, text="2. Publish to GitHub", width=20, command=self.publish, state="disabled")
+        self.preview_button = tk.Button(actions, text="2. 本地预览", width=18, command=self.preview)
+        self.preview_button.pack(side="left", padx=5)
+        self.publish_button = tk.Button(actions, text="3. 发布到 GitHub", width=20, command=self.publish, state="disabled")
         self.publish_button.pack(side="left", padx=5)
+        self.post_paths: list[Path] = []
+        self.refresh_posts()
 
     def write_log(self, message: str) -> None:
         self.log.configure(state="normal")
@@ -146,21 +166,47 @@ class NotionPublisher(tk.Tk):
         self.log.see(END)
         self.log.configure(state="disabled")
 
+    def refresh_posts(self) -> None:
+        project = Path(self.project_var.get())
+        posts_dir = project / "src" / "content" / "posts"
+        self.post_list.delete(0, END)
+        self.post_paths = sorted(posts_dir.glob("*.md")) if posts_dir.is_dir() else []
+        for path in self.post_paths:
+            self.post_list.insert(END, path.stem)
+        self.write_log(f"已刷新文章列表：{len(self.post_paths)} 篇")
+
+    def delete_selected_post(self) -> None:
+        selection = self.post_list.curselection()
+        if not selection:
+            messagebox.showwarning("未选择文章", "请先在文章列表中选择要删除的文章。")
+            return
+        post = self.post_paths[selection[0]]
+        if not messagebox.askyesno("确认删除", f"确定删除文章“{post.stem}”吗？\n\n此操作会删除 Markdown 文件，之后可通过 Git 恢复。"):
+            return
+        try:
+            post.unlink()
+            self.write_log(f"已删除文章：{post.name}")
+            self.refresh_posts()
+            self.publish_button.configure(state="normal")
+        except Exception as exc:
+            messagebox.showerror("删除失败", str(exc))
+
     def choose_project(self) -> None:
-        selected = filedialog.askdirectory(title="Choose your blog folder")
+        selected = filedialog.askdirectory(title="选择博客文件夹")
         if selected:
             self.project_var.set(selected)
+            self.refresh_posts()
 
     def choose_zip(self) -> None:
-        selected = filedialog.askopenfilename(title="Choose Notion export ZIP", filetypes=[("ZIP archive", "*.zip"), ("All files", "*.*")])
+        selected = filedialog.askopenfilename(title="选择 Notion 导出的 ZIP", filetypes=[("ZIP 文件", "*.zip"), ("所有文件", "*.*")])
         if selected:
             self.zip_path = Path(selected)
             self.zip_var.set(str(self.zip_path))
-            self.write_log(f"Selected: {self.zip_path.name}")
+            self.write_log(f"已选择：{self.zip_path.name}")
 
     def import_zip(self) -> None:
         if not self.zip_path:
-            messagebox.showwarning("Choose a ZIP", "Please choose a Notion export ZIP first.")
+            messagebox.showwarning("未选择 ZIP", "请先选择 Notion 导出的 ZIP 文件。")
             return
         project = Path(self.project_var.get())
         posts_dir = project / "src" / "content" / "posts"
@@ -181,21 +227,44 @@ class NotionPublisher(tk.Tk):
                 copied = 0
                 for md_file in markdown_files:
                     target, image_count = convert_markdown(md_file, all_files, posts_dir, images_dir)
-                    self.write_log(f"Imported: {target.name} ({image_count} image(s))")
+                    self.write_log(f"已导入：{target.name}（{image_count} 张图片）")
                     imported += 1
                     copied += image_count
-            self.write_log(f"Done: {imported} article(s), {copied} image(s).")
+            self.write_log(f"完成：{imported} 篇文章，{copied} 张图片。")
+            self.refresh_posts()
             self.publish_button.configure(state="normal")
-            messagebox.showinfo("Import complete", f"Imported {imported} article(s) and {copied} image(s).")
+            messagebox.showinfo("导入完成", f"已导入 {imported} 篇文章和 {copied} 张图片。")
         except Exception as exc:
-            self.write_log(f"ERROR: {exc}")
-            messagebox.showerror("Import failed", str(exc))
+            self.write_log(f"错误：{exc}")
+            messagebox.showerror("导入失败", str(exc))
         finally:
             self.import_button.configure(state="normal")
 
+    def preview(self) -> None:
+        project = Path(self.project_var.get())
+        if not (project / "package.json").is_file():
+            messagebox.showerror("博客文件夹无效", "选择的文件夹中没有 package.json。")
+            return
+        url = "http://localhost:5173"
+        try:
+            with urllib.request.urlopen(url, timeout=1):
+                self.write_log("本地预览服务已经运行，正在打开网页。")
+                webbrowser.open(url)
+                return
+        except Exception:
+            pass
+        try:
+            npm = "npm.cmd" if os.name == "nt" else "npm"
+            subprocess.Popen([npm, "run", "dev"], cwd=project, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+            self.write_log("正在启动本地预览：http://localhost:5173 …")
+            self.after(1500, lambda: webbrowser.open(url))
+        except Exception as exc:
+            self.write_log(f"预览错误：{exc}")
+            messagebox.showerror("本地预览失败", str(exc))
+
     def publish(self) -> None:
         project = Path(self.project_var.get())
-        message = self.commit_var.get().strip() or "Import Notion article"
+        message = self.commit_var.get().strip() or "导入 Notion 文章"
         self.publish_button.configure(state="disabled")
         threading.Thread(target=self._publish_worker, args=(project, message), daemon=True).start()
 
@@ -213,15 +282,15 @@ class NotionPublisher(tk.Tk):
             run(["add", "."])
             check = subprocess.run(["git", "-C", str(project), "diff", "--cached", "--quiet"])
             if check.returncode == 0:
-                self.after(0, self.write_log, "Nothing new to commit.")
+                self.after(0, self.write_log, "没有新的文件需要提交。")
                 return
             run(["commit", "-m", message])
             run(["push"])
-            self.after(0, self.write_log, "Published successfully. Cloudflare Pages will deploy automatically.")
-            self.after(0, lambda: messagebox.showinfo("Published", "GitHub push completed. Cloudflare Pages will deploy automatically."))
+            self.after(0, self.write_log, "发布成功，Cloudflare Pages 将自动部署。")
+            self.after(0, lambda: messagebox.showinfo("发布成功", "GitHub 推送完成，Cloudflare Pages 将自动部署。"))
         except Exception as exc:
-            self.after(0, self.write_log, f"PUBLISH ERROR: {exc}")
-            self.after(0, lambda: messagebox.showerror("Publish failed", str(exc)))
+            self.after(0, self.write_log, f"发布错误：{exc}")
+            self.after(0, lambda: messagebox.showerror("发布失败", str(exc)))
         finally:
             self.after(0, lambda: self.publish_button.configure(state="normal"))
 
